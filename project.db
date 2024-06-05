@@ -1,0 +1,8 @@
+--Create Mosque table
+CREATE TABLE Mosque (
+    MosqueID INT PRIMARY KEY,
+    MosqueName VARCHAR(50),
+    Address VARCHAR(100),
+    ContactNumber VARCHAR(20)
+);
+
