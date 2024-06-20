@@ -1,3 +1,10 @@
+--Create a Mosque table
+CREATE TABLE Mosque (
+    MosqueID INT PRIMARY KEY,
+    MosqueName VARCHAR(50),
+    Address VARCHAR(100),
+    ContactNumber VARCHAR(20)
+);
 --Create Mosque table
 CREATE TABLE Mosque (
     MosqueID INT PRIMARY KEY,
@@ -5,4 +12,258 @@ CREATE TABLE Mosque (
     Address VARCHAR(100),
     ContactNumber VARCHAR(20)
 );
+ 
+-- Create Volunteer table
+CREATE TABLE Volunteer (
+    VolunteerID INT PRIMARY KEY,
+    VolunteerName VARCHAR(50),
+    Email VARCHAR(100),
+    PhoneNumber VARCHAR(20)
+);
+ 
+-- Create Attendee table
+CREATE TABLE Attendee (
+    AttendeeID INT PRIMARY KEY,
+    AttendeeName VARCHAR(50),
+    Email VARCHAR(100),
+    PhoneNumber VARCHAR(20)
+);
+ 
+-- Create Event table
+CREATE TABLE Event (
+    EventID INT PRIMARY KEY,
+    EventName VARCHAR(100),
+    Description TEXT,
+    StartDateTime DATETIME,
+    EndDateTime DATETIME,
+    MosqueID INT,
+    FOREIGN KEY (MosqueID) REFERENCES Mosque(MosqueID)
+);
+ 
+-- Create VolunteerTask table
+CREATE TABLE VolunteerTask (
+    TaskID INT PRIMARY KEY,
+    EventID INT,
+    VolunteerID INT,
+    TaskDescription TEXT,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID),
+    FOREIGN KEY (VolunteerID) REFERENCES Volunteer(VolunteerID)
+);
+ 
+-- Create Attendance table
+CREATE TABLE Attendance (
+    AttendanceID INT PRIMARY KEY,
+    EventID INT,
+    AttendeeID INT,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID),
+    FOREIGN KEY (AttendeeID) REFERENCES Attendee(AttendeeID)
+);
+ 
+-- Create EventRegistration table
+CREATE TABLE EventRegistration (
+    RegistrationID INT PRIMARY KEY,
+    EventID INT,
+    AttendeeID INT,
+    RegistrationDate DATE,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID),
+    FOREIGN KEY (AttendeeID) REFERENCES Attendee(AttendeeID)
+);
+ 
+-- Create Room table
+CREATE TABLE Room (
+    RoomID INT PRIMARY KEY,
+    RoomName VARCHAR(50),
+    Capacity INT,
+    MosqueID INT,
+    FOREIGN KEY (MosqueID) REFERENCES Mosque(MosqueID)
+);
+ 
+-- Create Iftar table
+CREATE TABLE Iftar (
+    IftarID INT PRIMARY KEY,
+    EventID INT,
+    MenuDescription TEXT,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID)
+);
+ 
+-- Create Suhoor table
+CREATE TABLE Suhoor (
+    SuhoorID INT PRIMARY KEY,
+    EventID INT,
+    MenuDescription TEXT,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID)
+);
+ 
+-- Create QuranClass table
+CREATE TABLE QuranClass (
+    ClassID INT PRIMARY KEY,
+    EventID INT,
+    InstructorName VARCHAR(50),
+    FOREIGN KEY (EventID) REFERENCES Event(EventID)
+);
+ 
+-- Create SpecialEvent table
+CREATE TABLE SpecialEvent (
+    SpecialEventID INT PRIMARY KEY,
+    EventID INT,
+    Theme VARCHAR(50),
+    FOREIGN KEY (EventID) REFERENCES Event(EventID)
+);
+ 
+-- Create EidUlFitrNight table
+CREATE TABLE EidUlFitrNight (
+    EidNightID INT PRIMARY KEY,
+    EventID INT,
+    SpecialArrangements TEXT,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID)
+);
+ 
+-- Create EidDay table
+CREATE TABLE EidDay (
+    EidDayID INT PRIMARY KEY,
+    EventID INT,
+    SpecialArrangements TEXT,
+    FOREIGN KEY (EventID) REFERENCES Event(EventID)
+);
+ 
+
+SQL :
+Basic:
+---List all events hosted by Al-Farooq Mosque:
+SELECT *
+FROM Event
+WHERE MosqueID = (SELECT MosqueID FROM Mosque WHERE MosqueName = 'Al-Farooq Mosque');
+
+---Select all events happening during Ramadan:
+SELECT EventName, Description, StartDateTime, EndDateTime
+FROM Event
+WHERE StartDateTime >= '2024-04-10 18:30:00' AND EndDateTime <= '2024-04-10 20:30:00';
+---Calculate the total duration of events in hours:
+SELECT EventName, TIMESTAMPDIFF(HOUR, StartDateTime, EndDateTime) AS DurationHours
+FROM Event;
+ 
+-- Query to find the total number of attendees across all events:
+SELECT COUNT(*) AS TotalAttendees
+FROM Attendance;
+ 
+---Fetch all rows from the Room table and sort them based on the MosqueID
+SELECT * FROM Room order by MosqueID;
+ 
+Intermediate:
+---Find the events with the highest attendance:
+SELECT e.EventName, COUNT(a.AttendanceID) AS TotalAttendance
+FROM Event e
+LEFT JOIN Attendance a ON e.EventID = a.EventID
+GROUP BY e.EventName
+ORDER BY TotalAttendance DESC
+LIMIT 3;
+ 
+---Get a list of all volunteers and their assigned tasks for a specific event:
+SELECT v.VolunteerName, vt.TaskDescription
+FROM Volunteer v
+JOIN VolunteerTask vt ON v.VolunteerID = vt.VolunteerID
+JOIN Event e ON vt.EventID = e.EventID
+WHERE e.EventName = 'Iftar Gathering';
+ 
+---Find the number of attendees for each event:
+SELECT e.EventName, COUNT(a.AttendeeID) AS AttendeeCount
+FROM Event e
+LEFT JOIN Attendance a ON e.EventID = a.EventID
+GROUP BY e.EventName;
+ 
+---List the total room capacity:
+SELECT M.MosqueName, SUM(R.Capacity) AS Total_Room_Capacity
+FROM Mosque M
+INNER JOIN Room R ON M.MosqueID = R.MosqueID
+WHERE M.MosqueName = 'Putra Mosque'
+GROUP BY M.MosqueName;
+ 
+--- Get the list of volunteers and the tasks they are assigned for multiple events:
+SELECT v.VolunteerName, e.EventName, vt.TaskDescription
+FROM Volunteer v
+JOIN VolunteerTask vt ON v.VolunteerID = vt.VolunteerID
+JOIN Event e ON vt.EventID = e.EventID
+ORDER BY v.VolunteerName, e.EventName;
+ 
+
+Advanced:
+---Find the average number of attendees per event:
+SELECT AVG(attendees.TotalAttendees) AS AverageAttendeesPerEvent
+FROM (
+    SELECT e.EventID, COUNT(at.AttendeeID) AS TotalAttendees
+    FROM Event e
+    LEFT JOIN Attendance at ON e.EventID = at.EventID
+    GROUP BY e.EventID
+) AS attendees;
+ 
+---Find the events with special arrangements for both Eid ul-Fitr night and Eid day:
+SELECT e.EventName
+FROM Event e
+WHERE EXISTS (
+    SELECT 1 FROM EidUlFitrNight en WHERE en.EventID = e.EventID
+) AND EXISTS (
+    SELECT 1 FROM EidDay ed WHERE ed.EventID = e.EventID
+);
+ 
+---Find volunteers who have tasks for events with specific themes:
+SELECT v.VolunteerID, v.VolunteerName
+FROM Volunteer v
+JOIN VolunteerTask vt ON v.VolunteerID = vt.VolunteerID
+JOIN Event e ON vt.EventID = e.EventID
+JOIN SpecialEvent se ON e.EventID = se.EventID
+WHERE se.Theme = 'Community Unity';
+ 
+---Retrieves events that ‘Sara ahmed' is assigned to as a volunteer
+SELECT e.EventName, e.StartDateTime, e.EndDateTime
+FROM Event e
+WHERE e.EventID IN (
+    SELECT vt.EventID
+    FROM VolunteerTask vt
+    WHERE vt.VolunteerID = (
+        SELECT VolunteerID
+        FROM Volunteer
+        WHERE VolunteerName = 'Sara Ahmed'
+    )
+);
+ 
+---Retrieves the top 3 events with the highest attendance, along with the names of the top 3 volunteers assigned to tasks for those events, and the number of tasks assigned to each volunteer:
+WITH CTE_TopEvents AS (
+    SELECT e.EventID, e.EventName, COUNT(a.AttendeeID) AS TotalAttendance
+    FROM Event e
+    LEFT JOIN Attendance a ON e.EventID = a.EventID
+    GROUP BY e.EventID, e.EventName
+    ORDER BY TotalAttendance DESC
+    LIMIT 3
+)
+SELECT te.EventName, v.VolunteerName, COUNT(vt.TaskID) AS TaskCount
+FROM CTE_TopEvents te
+JOIN VolunteerTask vt ON te.EventID = vt.EventID
+JOIN Volunteer v ON vt.VolunteerID = v.VolunteerID
+GROUP BY te.EventName, v.VolunteerName
+ORDER BY te.EventName, TaskCount DESC;
+ 
+
+Relational Algebra:
+Basic:
+Get the names and email addresses of all attendees:
+•	π AttendeeName, Email (Attendee)
+Find all the volunteer tasks assigned to volunteers named “Jeba Islam":
+•	σ VolunteerName='Jeba Islam' (Volunteer) × VolunteerTask
+Retrieve the event name, attendee name, and registration date for all registered attendees:
+•	Event ⋈ (EventRegistration ⋈ Attendee)
+Get the room names and capacities for rooms in the mosque with ID 1:
+•	ρ (RoomName, RoomCapacity) (π RoomName, Capacity (σ MosqueID=1 (Room)))
+Find the events that have both Iftar and Suhoor arrangements:
+•	π EventID (Iftar) ∩ π EventID (Suhoor)
+Intermediate:
+Retrieve events along with their mosques:
+•	π(Event.EventID, Event.EventName, Event.Description, Event.StartDateTime, Event.EndDateTime, Mosque.MosqueName)(Event ⋈ Mosque.MosqueID = Event.MosqueID (Mosque | MosqueID = Event.MosqueID))
+Retrieve volunteers and their assigned tasks for a specific event (EventID = 2):
+•	π(Volunteer.VolunteerID, Volunteer.VolunteerName, VolunteerTask.TaskDescription)(Volunteer ⨝ (VolunteerTask ⨝ (σ(EventID=2)(Event))))
+
+Advanced:
+Retrieve events along with the number of registered attendees and their contact numbers:
+ 
+•	π(Event.EventID, Event.EventName, COUNT(EventRegistration.AttendeeID), Attendee.PhoneNumber)((Event ⨝ EventRegistration) ⨝ Attendee)
+
 
